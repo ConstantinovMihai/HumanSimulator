@@ -1,0 +1,131 @@
+%% Author: Carmen Gomez Mena
+%%% Date: March 2024 - Nov 2024
+%%% MSc Thesis: A-HSC / C&S Track
+
+%% File: Runs the HO or HSC models
+
+% Inputs:
+%   - Simulation parameters
+%   - Model definition (tau, dynamics, gains, remnant)
+%   - Init_model (HO or HSC)
+
+% Outputs:
+%   - Simulation outputs in several graphs and metrics
+
+%%% NOTE --> Make sure to select the right model to run
+clc;
+clear all;
+% Plotting stuff
+set(groot,'defaulttextinterpreter','latex');
+set(groot, 'defaultAxesTickLabelInterpreter','latex'); 
+set(groot, 'defaultLegendInterpreter','latex');
+
+%% Sim parameters
+t_meas = 120;
+cut_time = 1;
+dt = 0.01;
+t = 0: dt:(t_meas-dt);
+N = length(t);
+inch_to_cm = 2.54; %from inches to cm
+
+%% Remnant white noise
+rng(12); 
+whiteNoise = randn(N,1)/sqrt(dt); %divide!
+WN = timeseries(whiteNoise,t);
+
+%% Initialise model
+% Dynamics
+set_dyn = 2;
+% HO parameters
+set_K_HO = 1;
+set_tau_p = 2;
+set_Kn = 0; % for SI
+
+%% Select model to run
+model = 'HO';
+
+init_model_HO(t_meas-dt, set_dyn, set_tau_p, set_K_HO, set_Kn); %span Kn  %127.99
+
+% Run
+out = sim('model_HO.slx');
+set_param('model_HO',"FastRestart","off")
+
+fprintf('\nRunning MODEL_HO for SI/DI \n');
+
+figure;
+subplot(3,1,1)
+hold on; grid on;
+plot(out.t.data(cut_time:end), out.ft.data(cut_time:end),'linewidth', 1.5,'DisplayName', 'Real Target')
+plot(out.t.data(cut_time:end), out.x.data(cut_time:end),'linewidth', 1.5, 'DisplayName', 'State')
+plot(out.t.data(cut_time:end), out.ft_p.data(cut_time:end),'--','DisplayName', 'Target HO')
+xlim([40,60])
+xlabel('Time[s]')
+ylabel('Target function [inches]') 
+title('Target and state')
+legend()
+
+subplot(3,1,2)
+hold on; grid on;
+plot(out.t.data(cut_time:end), out.T_ho.data(cut_time:end),'--','DisplayName', 'T-HO')
+plot(out.t.data(cut_time:end), out.T_tot.data(cut_time:end),'linewidth', 1.5, 'DisplayName', 'T-TOTAL')
+xlim([40,60])
+xlabel('Time[s]')
+ylabel('Torques [Nm]') 
+title('Torques')
+legend()
+
+subplot(3,1,3)
+hold on; grid on;
+plot(out.t.data(cut_time:end), out.fd.data(cut_time:end),'DisplayName', 'Disturbance (fd)')
+plot(out.t.data(cut_time:end), out.n.data(cut_time:end),'DisplayName', 'Remnant (HO model)')
+plot(out.t.data(cut_time:end), out.u.data(cut_time:end),'DisplayName', 'u (Input to CE)')
+xlim([40,60])
+xlabel('Time[s]')
+ylabel('Inputs [inches]') 
+title('Extra signals')
+legend()
+
+%% Values SI
+% rms of tracking
+fprintf('\nRSM of tracking error: %.2f inches (%.2f cm)', rms(out.e.data(cut_time:end)), rms(out.e.data(cut_time:end)*inch_to_cm));
+fprintf('\nVAR of tracking error: %.2f cm2', var(out.e.data(cut_time:end)*inch_to_cm));
+arm = 0.09;
+fprintf('\nVAR of T-tot: %.4f Nm2', var(out.T_tot.data(cut_time:end)));
+fprintf('\nVAR of F-tot: %.3f N2\n', var(out.T_tot.data(cut_time:end)/arm));
+
+
+%%  Compute ratio for time interval
+dt = out.t.data(2)-out.t.data(1);
+T = out.t.data(end) - out.t.data(cut_time);
+N = length(out.t.data(cut_time:end));
+
+fs = 1/dt; % sampling frequency
+omega_fft = 2*pi*fs*(0:(N/2)-1)/N; %positive freq. vector (for plotting)
+
+k_td = [3 4 5 7 8 9 11 13 19 22 29 31 47 51 77 79 143 147 263 267]; %indices of FF freq
+F_u = dt*fft(out.u.data(cut_time:end));  % in inches
+F_u = F_u(2:N/2);
+Suu = real((1/T)*F_u.*conj(F_u));
+
+% Compute remanant ratio: Power due to remnant = 1 - fraction of power due to FF
+VAR_U_UN = 1 - (sum(Suu(k_td)) ./ sum(Suu)); %% From Span
+
+fprintf('\n var(u_n)/var(u) ratio: %.2f', VAR_U_UN);
+fprintf('\n Old Remnant var(n)/var(u) ratio: %.2f \n', var(out.n.data(cut_time:end))/var(out.u.data(cut_time:end)));
+
+%% Save the signals
+signals = struct();
+
+% Assign the signals to the structure fields
+signals.e = out.e.data(cut_time:end);
+signals.x = out.x.data(cut_time:end);
+signals.ft = out.ft.data(cut_time:end);
+signals.u = out.u.data(cut_time:end);
+signals.fd = out.fd.data(cut_time:end);
+signals.n = out.n.data(cut_time:end);
+signals.ft_p = out.ft_p.data(cut_time:end);
+signals.f_star = out.f_star.data(cut_time:end);
+% Save the structure to a .mat file
+save('signals.mat', 'signals');
+
+disp("done!")

@@ -1,0 +1,2 @@
+This folder contains a reimplementation of the cybernetic model.
+Both Matlab and simulink are used in order to verify the Numpy/Simpy simulation
