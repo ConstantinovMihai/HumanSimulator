@@ -1,0 +1,165 @@
+
+%% CONSTANTS %%
+% Define given constants
+K_p = 0.28;
+tau_v = 0.34;
+omega_nms = 7.87;
+zeta_nms = 0.14;
+T_l_e = 1.42;
+K_f = 0.95;
+tau_f = 1.15;
+T_l_f = 1.10;
+K_v = K_p * T_l_e;
+tau_s = 2;
+tau_f_star = tau_s - tau_f;
+Kn_remnant = 0.03;
+Tn_remnant = 0.23;
+dt = 0.01;
+t_total = 200;
+
+% Define Pade approximations for time delays
+numerator_pade = [-1, 12, -60, 120];
+denominator_pade = [1, 12, 60, 120];
+
+
+% Define Pade approximations for time delays
+numerator_pade = [-1, 12, -60, 120];
+denominator_pade = [1, 12, 60, 120];
+
+% Calculate the numerator and denominator for H_pade_v
+num_pade_v = numerator_pade .* tau_v .^ (3:-1:0);
+den_pade_v = denominator_pade .* tau_v .^ (3:-1:0);
+
+% Create the transfer function H_pade_v
+H_pade_v = tf(num_pade_v, den_pade_v);
+
+% Define transfer functions
+H_remnant = tf(Kn_remnant, [Tn_remnant, 1]);
+H_nms = tf(omega_nms^2, [1, 2*zeta_nms*omega_nms, omega_nms^2]);
+
+H_of = tf(K_f, [T_l_f, 1]);
+H_ce = tf(5, [1, 0, 0]);
+H_vp = tf([K_v, K_p], 1);
+
+% Combine transfer functions for H_comb
+H_comb = series(H_vp, H_nms);
+H_comb = series(H_comb, H_pade_v);
+% H_comb = series(H_comb, H_pade_v);
+
+% Multiply H_comb with H_ce to get overall system
+H_total = series(H_comb, H_ce)
+
+% Create the closed-loop system (feedback)
+H_closed_loop = feedback(H_total, 1);
+
+% Define input signal (step input)
+input_signal = csvread('f_star_matlab.csv');
+
+% Define simulation time
+t = 0:dt:t_total-dt;
+
+
+% Simulate the system response
+[output_signal, t_out, ~] = lsim(H_closed_loop, input_signal, t);
+
+% Compute the error signal (difference between input and output)
+error_signal = input_signal - output_signal;
+
+% python's u_star
+u_star = csvread('u_star_matlab.csv');
+
+%% load van der el's signals
+input_signal = csvread('input_signal_ahead.csv');
+
+real_response = real_response(:,1);
+remnant = remnant(:,1);
+
+response_python = csvread('u_star_matlab.csv');
+
+real_response = real_response - remnant;
+
+output_python = csvread('u_star_matlab.csv');
+
+%% Plot the results
+figure;
+subplot(2,1,1);
+hold on;
+plot(t_out, output_signal, 'DisplayName', 'Matlab predicted u star response');
+plot(t_out, u_star, 'DisplayName', 'Python predicted u star response');
+hold off;
+title('Output Signal');
+xlabel('Time (s)');
+ylabel('Output');
+grid on;
+legend show;
+
+subplot(2,1,2);
+plot(t_out, output_signal-u_star);
+title('Difference');
+xlabel('Time (s)');
+ylabel('Error');
+grid on;
+%% plot the signals
+figure;
+subplot(3,1,1);
+hold on;
+plot(output_python, 'DisplayName', 'Output Signal');
+plot(u_star, 'DisplayName', 'Response simulated by python');
+hold off;
+title('Measured Response');
+xlabel('Time (s)');
+ylabel('Response');
+legend show;
+grid on;
+
+% Simulated response
+subplot(3,1,2);
+plot(t, output_signal, 'DisplayName', 'Output Signal');
+title('Simulated Response');
+xlabel('Time (s)');
+ylabel('Response');
+legend show;
+grid on;
+
+% Difference between simulated response and real response
+subplot(3,1,3);
+plot(t, output_signal-real_response, 'DisplayName', 'Difference');
+title('Difference Between Simulated Response and Real Response');
+xlabel('Time (s)');
+ylabel('Response');
+legend show;
+grid on;
+
+VAF(real_response, output_signal)
+VAF(real_response, response_python)
+disp('Done!');
+
+
+%% FFt of the difference signal 
+% Compute the difference signal
+difference_signal = output_signal - u_star;
+
+% Compute the FFT of the difference signal
+L = length(difference_signal);
+Y = fft(difference_signal);
+
+% Compute the two-sided spectrum P2 and the single-sided spectrum P1
+P2 = abs(Y/L);
+P1 = P2(1:L/2+1);
+P1(2:end-1) = 2*P1(2:end-1);
+
+% Define the frequency domain f
+Fs = 1; % Assuming the sampling frequency is 1 Hz for simplicity, adjust as needed
+f = Fs*(0:(L/2))/L;
+
+% Plot the single-sided amplitude spectrum as a scatter plot in log-log scale
+figure;
+scatter(f, P1, 'filled');
+set(gca, 'XScale', 'log', 'YScale', 'log');
+title('Single-Sided Amplitude Spectrum of Difference Signal (output\_signal - u\_star)');
+xlabel('Frequency (Hz)');
+ylabel('|P1(f)|');
+grid on;
+
+
+disp('FFT plotted!');

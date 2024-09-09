@@ -1,0 +1,10 @@
+*.csv
+*.npy
+*.mldatx
+*.png
+*/.ipynb_checkpoints/*
+*/.vscode/*
+*/__pycache__
+*/.pytest
+David_Li_code
+Data
