@@ -6,5 +6,5 @@
 */.vscode/*
 */__pycache__
 */.pytest
-David_Li_code/
-Data/
+David_Li_code
+Data
