@@ -240,14 +240,17 @@ def run_test( plot_bode = False, plot_response = False, inject_remnant=True, tes
 
     # prepare FFT calculation
 
-    u, u_star, error_signal, _ = simulate_closed_loop_dynamics(f_star, ct.H_comb, ct.H_ce, remnant_realisation, fd_signal, ct)
+    u, u_star, error_signal, x = simulate_closed_loop_dynamics(f_star, ct.H_comb, ct.H_ce, remnant_realisation, fd_signal, ct)
     np.savetxt("u_star.csv", u_star, delimiter=",")
     
-    # # remove transient behaviour
-    # u = sf.remove_transient_behaviour(u, ct)
-    # u_star = sf.remove_transient_behaviour(u_star, ct)
-    # error_signal = sf.remove_transient_behaviour(error_signal, ct)
-    # f_star =  sf.remove_transient_behaviour(f_star, ct)
+    np.savetxt(r"HumanSimulator/Simulated_signals/focused_u.csv", u, delimiter=",")
+    np.savetxt(r"HumanSimulator/Simulated_signals/focused_x.csv", u_star, delimiter=",")
+    np.savetxt(r"HumanSimulator/Simulated_signals/focused_error_signal.csv", error_signal, delimiter=",")
+    np.savetxt(r"HumanSimulator/Simulated_signals/focused_remnant_signal.csv", remnant_realisation, delimiter=",")
+    np.savetxt(r"HumanSimulator/Simulated_signals/focused_input_signal.csv", input_signal, delimiter=",")
+    # np.savetxt(r"HumanSimulator/Simulated_signals/focused_tc.csv", tc, delimiter=",")
+    # np.savetxt(r"HumanSimulator/Simulated_signals/focused_distraction_times.csv", distraction_times, delimiter=",")
+    np.savetxt(r"HumanSimulator/Simulated_signals/focused_f_star.csv", f_star, delimiter=",")
 
     if plot_response:
         #remnant_realisation = sf.remove_transient_behaviour(remnant_realisation, ct)

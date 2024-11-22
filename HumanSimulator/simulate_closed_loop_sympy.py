@@ -176,7 +176,7 @@ def simulate_transition_part_closed_loop(f_star, A,B,C,D, remnant, state_transit
     return u_out, u_star_out, error_signal_out, x
 
 
-def simulate_time_varying_closed_loop(distraction_times, ct, f_star, remnant_signal):
+def simulate_time_varying_closed_loop(distraction_times, ct, f_star, remnant_signal, transition_time=200):
 
     A_comp, B_comp, C_comp, D_comp = generate_combined_system(ct.H_comb, ct.H_ce, ct)
     # u, u_star, error_signal, x, _ = simulate_closed_loop_dynamics_num(f_star, A_comp, B_comp, C_comp, D_comp, remnant_signal, ct, x0)
@@ -190,11 +190,11 @@ def simulate_time_varying_closed_loop(distraction_times, ct, f_star, remnant_sig
 
     for idx, chunk in enumerate(f_star_chunks):
         print(f"Chunk {idx} of {len(f_star_chunks)}")
-        input_signal_chunk_transition = chunk[:200]
-        input_signal_chunk_rest = chunk[200:]
+        input_signal_chunk_transition = chunk[:transition_time]
+        input_signal_chunk_rest = chunk[transition_time:]
 
-        remnant_chunk_transition = remnant_chunks[idx][:200]
-        remnant_chunk_rest = remnant_chunks[idx][200:]
+        remnant_chunk_transition = remnant_chunks[idx][:transition_time]
+        remnant_chunk_rest = remnant_chunks[idx][transition_time:]
 
         u, u_star, error_signal, x_f = simulate_transition_part_closed_loop(input_signal_chunk_transition, A_comp, B_comp, C_comp, D_comp, remnant_chunk_transition, idx % 2, ct, x_f)
         
@@ -311,6 +311,11 @@ if __name__ == "__main__":
 
     f_star = np.loadtxt("f_star.csv", delimiter=",")
     distraction_times = np.sort(np.random.randint(0, len(f_star), 2))
+    # print(distraction_times)
+    # distraction_times = np.array([1000, len(f_star)-1001])
+    # print(f"Distraction times: {distraction_times}")
+    # distraction_times = np.array([0, len(f_star)])
+    # print(f"Distraction times: {distraction_times}")
     tc = generate_tc_from_distraction_times(distraction_times, len(f_star))
 
     # remnant_signal, _ = time_varying_remnant(distraction_times, ct, f_star)
@@ -322,18 +327,20 @@ if __name__ == "__main__":
     print(f"Simulating the closed loop system!")
     u, u_star, error_signal, x = simulate_time_varying_closed_loop(distraction_times, ct, f_star, remnant_signal)
     input_signal = np.loadtxt("input_signal.csv", delimiter=",").reshape(-1, 1)
-   
-    # save the output signals
-    np.savetxt(r"HumanSimulator/Simulated_signals/u.csv", u, delimiter=",")
-    np.savetxt(r"HumanSimulator/Simulated_signals/u_star.csv", u_star, delimiter=",")
-    np.savetxt(r"HumanSimulator/Simulated_signals/error_signal.csv", error_signal, delimiter=",")
-    np.savetxt(r"HumanSimulator/Simulated_signals/remnant_signal.csv", remnant_signal, delimiter=",")
-    np.savetxt(r"HumanSimulator/Simulated_signals/input_signal.csv", input_signal, delimiter=",")
-    np.savetxt(r"HumanSimulator/Simulated_signals/tc.csv", tc, delimiter=",")
-    np.savetxt(r"HumanSimulator/Simulated_signals/distraction_times.csv", distraction_times, delimiter=",")
-    np.savetxt(r"HumanSimulator/Simulated_signals/f_star.csv", f_star, delimiter=",")
     
-    plt.plot(input_signal, "r", label="original signal")
+    print(f"{len(u)=}")
+
+    # # save the output signals
+    # np.savetxt(r"HumanSimulator/Simulated_signals/cd_u.csv", u, delimiter=",")
+    # np.savetxt(r"HumanSimulator/Simulated_signals/cd_x.csv", u_star, delimiter=",")
+    # np.savetxt(r"HumanSimulator/Simulated_signals/cd_error_signal.csv", error_signal, delimiter=",")
+    # np.savetxt(r"HumanSimulator/Simulated_signals/cd_remnant_signal.csv", remnant_signal, delimiter=",")
+    # np.savetxt(r"HumanSimulator/Simulated_signals/cd_input_signal.csv", input_signal, delimiter=",")
+    # np.savetxt(r"HumanSimulator/Simulated_signals/cd_tc.csv", tc, delimiter=",")
+    # np.savetxt(r"HumanSimulator/Simulated_signals/cd_distraction_times.csv", distraction_times, delimiter=",")
+    # np.savetxt(r"HumanSimulator/Simulated_signals/cd_f_star.csv", f_star, delimiter=",")
+    
+    plt.plot(input_signal, "r", label=r"Input signal ($f_t$)")
     for distraction_time in distraction_times:
         plt.axvline(distraction_time, color='k', linestyle='--', alpha=0.35)
         
@@ -348,14 +355,14 @@ if __name__ == "__main__":
     plt.plot(u_star, label="u_star")
 
     # create nice legend
-    blue_patch = mpatches.Patch(color='lightblue', alpha=0.3, label='distraction interval')
-    red_line = plt.Line2D([0], [0], color='red', label='original signal')
-    u_star_line = plt.Line2D([0], [0], color='blue', label='u_star')
-    plt.legend(handles=[blue_patch, red_line, u_star_line])
+    blue_patch = mpatches.Patch(color='lightblue', alpha=0.3, label='Distraction interval')
+    red_line = plt.Line2D([0], [0], color='red', label=r"Input signal $f_t$")
+    u_star_line = plt.Line2D([0], [0], color='blue', label=r'Control output signal $x$')
+    plt.legend(handles=[blue_patch, red_line, u_star_line], loc='best')
 
     plt.xlabel("Time step")
-    plt.ylabel("Output signal")
-    plt.title("Response of the closed-loop system")
+    plt.ylabel("Signal amplitude")
+    plt.title("Simulated response of a distracted human operator")
     plt.grid()
     plt.show()
 

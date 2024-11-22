@@ -24,8 +24,8 @@ class SimulationConstants:
     tau_v_val = 0  # seconds (s) 
     tau_s = 1  # seconds (s)
     dt = 0.01  # seconds (s)
-    t_total = 200  # seconds (s)
-    t_measurement = 100  # seconds (s)
+    t_total = 240  # seconds (s)
+    t_measurement = 120  # seconds (s)
     settling_time = 2  # seconds (s)
     Kn_remnant_val = 0.205
     Tn_remnant_val = 0.2

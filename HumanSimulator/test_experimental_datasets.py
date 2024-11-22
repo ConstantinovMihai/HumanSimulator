@@ -186,8 +186,6 @@ def read_sasha_parameters(ct : constants.SimulationConstants, folder=r'/home/mih
     ct.update_transfer_functions()
 
 
-
-
 def compute_noise_power_metric(v, input_signal, fd_signal, dt):
     """
     Compute the noise power metric Pn for a given signal.
@@ -198,6 +196,7 @@ def compute_noise_power_metric(v, input_signal, fd_signal, dt):
     dt : float - The time step or sampling interval.
     Returns: float - The noise power metric Pn.
     """
+
     N = len(v) # Number of points in the signal
    
     frequency_values, fft_values = get_fft_values(v, 1/dt, N)
@@ -225,7 +224,7 @@ def compute_noise_power_metric(v, input_signal, fd_signal, dt):
     var_v_fd = np.sum((np.abs(V[n_fd]) / (N / 2)) ** 2) / 2
     var_v_ft = np.sum((np.abs(V[n_ft]) / (N / 2)) ** 2) / 2
 
-    # Calculate frequency weighting
+    # Calculate frequency weighting (= frequency resolution on the DFT)
     dw = 2 * np.pi / (N * dt)
 
     # Calculate total variance
@@ -330,8 +329,8 @@ def verify_sasha(generate_plots=False, folder=r'Data/Clean_CSV_data/Sasha_SI_fof
         real_response = real_responses[idx]
         fd_signal = fd_signals[idx]
 
-        Kn = tune_gain_parameter(ct, idx=idx, person_idx=person_idx)
-        ct.Kn_remnant = Kn
+        # Kn = tune_gain_parameter(ct, idx=idx, person_idx=person_idx)
+        # ct.Kn_remnant = Kn
         ct.update_transfer_functions()
         u, u_star, error_signal, f_star, remnant_realisation, input_signal = generate_simulation_signals(ct, input_signal, fd_signal)
 
@@ -372,10 +371,10 @@ def verify_sasha(generate_plots=False, folder=r'Data/Clean_CSV_data/Sasha_SI_fof
 
 if __name__ == "__main__":
     
-    tune_gain_parameters = True
+    tune_gain_parameters = False
     run_david = False
     run_van_der_el = False
-    run_sasha = False
+    run_sasha = True
 
     if tune_gain_parameters:
         print("Tuning the gain parameter")
@@ -388,7 +387,7 @@ if __name__ == "__main__":
 
     if run_van_der_el:
         print("Running Van der El's dataset simulation")
-        vaf_van_der_el(generate_plots=False)
+        vaf_van_der_el(generate_plots=True)
 
     if run_sasha:
         print("Running Sasha's dataset simulation")

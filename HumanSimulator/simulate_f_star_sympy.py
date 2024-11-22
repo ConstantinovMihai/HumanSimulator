@@ -269,7 +269,6 @@ def test_time_constant_symbols():
     f_star, _ = simulate_f_star(input_signal, ct)
     f_star = sf.remove_transient_behaviour(f_star, ct)
 
-
     # plot the response
     plt.plot(input_signal, "r", label="original signal")
    # Calculate lengths
