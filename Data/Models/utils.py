@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import re
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import confusion_matrix
 
 def plot_confusion_matrix(conf_matrix):
     plt.figure(figsize=(8, 6))
@@ -172,3 +173,221 @@ def plot_masked_signal(tc_test, distances):
     plt.title('Distances plot with Different Colors Based on mdist (real label)')
     plt.legend()
     plt.show()
+
+def apply_windowing_to_tc(data, window_length=150, overlap=0.5):
+    """
+    Applies windowing to each column of the input array.
+
+    Args:
+        data (numpy.ndarray): 2D array where each column is to be windowed.
+        window_length (int): The length of each window.
+        overlap (float): The percentage of overlap (0 < overlap < 1).
+
+    Returns:
+        numpy.ndarray: 2D array where each column has been windowed.
+    """
+    # Initialize a list to hold windowed columns
+    windowed_columns = []
+
+    # Apply windowing to each column
+    for col in range(data.shape[1]):
+        # Extract the column
+        column_data = data[:, col]
+
+        # Apply create_windows to the column
+        windowed_column = create_windows(column_data, window_length, overlap)
+
+        # Add the windowed column to the list
+        windowed_columns.append(windowed_column)
+
+    return np.array(windowed_columns)
+
+
+def create_windows(signal_column, window_length, overlap):
+    """
+    Creates overlapping windows for a given signal column.
+
+    Args:
+        signal_column (numpy.ndarray): A 1D array of the signal.
+        window_length (int): The length of each window.
+        overlap (float): The percentage of overlap (0 < overlap < 1).
+
+    Returns:
+        numpy.ndarray: A 2D array where each row is a windowed segment of the signal.
+    """
+    step = int(window_length * (1 - overlap))  # Compute the step size based on the overlap
+    windows = [signal_column[i:i + window_length] for i in range(0, len(signal_column) - window_length + 1, step)]
+    return np.array(windows)
+
+def compute_derivatives(array):
+    """
+    Computes the derivative of each column in a 2D array.
+
+    Args:
+        array (numpy.ndarray): 2D array where each column represents a time series.
+
+    Returns:
+        numpy.ndarray: 2D array containing the derivative of each column.
+    """
+    return np.diff(array, axis=0)
+
+
+def process_signals_from_file(file_path, window_length, overlap, runs_per_participant=4):
+    """
+    Loads a CSV file, applies StandardScaler to each column, computes the derivatives,
+    groups columns into lists of 4, and applies windowing to both the scaled and derivative signals.
+
+    Args:
+        file_path (str): Path to the CSV file.
+        window_length (int): The length of each window.
+        overlap (float): The percentage of overlap (0 < overlap < 1).
+
+    Returns:
+        tuple: Two lists - one for the windowed scaled signals and one for the windowed derivative signals,
+               each containing windowed arrays (4 per group).
+    """
+    # Load the CSV data
+    signal = np.loadtxt(file_path, delimiter=',')
+
+    # Initialize lists for storing windowed arrays (4 per group)
+    signal_windowed_list = []
+    derivative_signal_windowed_list = []
+
+    # Standardize each column and compute derivatives
+    scaled_signal = np.empty_like(signal)
+    for j in range(signal.shape[1]):
+        scaler = StandardScaler()
+        scaled_signal[:, j] = scaler.fit_transform(signal[:, j].reshape(-1, 1)).flatten()
+
+    # Compute the derivatives for each column
+    derivative_signal = compute_derivatives(signal)
+    for j in range(derivative_signal.shape[1]):
+        scaler = StandardScaler()
+        derivative_signal[:, j] = scaler.fit_transform(derivative_signal[:, j].reshape(-1, 1)).flatten()
+
+    # Group the signal in steps of 4 and apply windowing
+    for i in range(0, scaled_signal.shape[1], runs_per_participant):
+        # For the scaled signal
+        scaled_group = []
+        for j in range(i, min(i + runs_per_participant, scaled_signal.shape[1])):
+            # Apply windowing to the scaled signal
+            windowed_column = create_windows(scaled_signal[:, j], window_length, overlap)
+            scaled_group.append(windowed_column)
+
+        signal_windowed_list.append(np.array(scaled_group))
+
+        # For the derivative signal
+        derivative_group = []
+        for j in range(i, min(i + runs_per_participant, derivative_signal.shape[1])):
+            # Apply windowing to the derivative signal
+            windowed_derivative_column = create_windows(derivative_signal[:, j], window_length, overlap)
+            derivative_group.append(windowed_derivative_column)
+
+        derivative_signal_windowed_list.append(np.array(derivative_group))
+
+    return np.array(signal_windowed_list)[:, :, 1:, :].reshape(-1, window_length), np.array(derivative_signal_windowed_list).reshape(-1, window_length)
+
+def process_signals_from_file(file_path, window_length, overlap, runs_per_participant=4):
+    """
+    Loads a CSV file, applies StandardScaler to each column, computes the derivatives,
+    groups columns into lists of 4, and applies windowing to both the scaled and derivative signals.
+
+    Args:
+        file_path (str): Path to the CSV file.
+        window_length (int): The length of each window.
+        overlap (float): The percentage of overlap (0 < overlap < 1).
+
+    Returns:
+        tuple: Two lists - one for the windowed scaled signals and one for the windowed derivative signals,
+               each containing windowed arrays (4 per group).
+    """
+    # Load the CSV data
+    signal = np.loadtxt(file_path, delimiter=',')
+
+    # Initialize lists for storing windowed arrays (4 per group)
+    signal_windowed_list = []
+    derivative_signal_windowed_list = []
+
+    # Standardize each column and compute derivatives
+    scaled_signal = np.empty_like(signal)
+
+    for j in range(signal.shape[1]):
+        scaler = StandardScaler()
+        scaled_signal[:, j] = scaler.fit_transform(signal[:, j].reshape(-1, 1)).flatten()
+
+    # Compute the derivatives for each column
+    derivative_signal = compute_derivatives(signal)
+    scaled_signal = scaled_signal[1:,:]
+
+    for j in range(derivative_signal.shape[1]):
+        scaler = StandardScaler()
+        derivative_signal[:, j] = scaler.fit_transform(derivative_signal[:, j].reshape(-1, 1)).flatten()
+
+    # Group the signal in steps of 4 and apply windowing
+    for i in range(0, scaled_signal.shape[1], runs_per_participant):
+        # For the scaled signal
+        scaled_group = []
+        for j in range(i, min(i + runs_per_participant, scaled_signal.shape[1])):
+            # Apply windowing to the scaled signal
+            windowed_column = create_windows(scaled_signal[:, j], window_length, overlap)
+            scaled_group.append(windowed_column)
+
+        signal_windowed_list.append(np.array(scaled_group))
+
+        # For the derivative signal
+        derivative_group = []
+        for j in range(i, min(i + runs_per_participant, derivative_signal.shape[1])):
+            # Apply windowing to the derivative signal
+            windowed_derivative_column = create_windows(derivative_signal[:, j], window_length, overlap)
+            derivative_group.append(windowed_derivative_column)
+
+        derivative_signal_windowed_list.append(np.array(derivative_group))
+
+    return np.array(signal_windowed_list).reshape(-1, window_length), np.array(derivative_signal_windowed_list).reshape(-1, window_length)
+
+
+def filter_distracted_columns(distracted_times_1d):
+    """
+    Filters out rows from the input array where the sum across each row is zero.
+
+    Args:
+        distracted_times_1d (numpy.ndarray): 2D array where each row represents a time series
+                                             and each column represents a time step.
+
+    Returns:
+        numpy.ndarray: Filtered array with only rows where the sum is not zero.
+    """
+
+    # Find the indices of the rows where the sum across each row is not zero
+    distracted_columns = np.array(np.where(np.sum(distracted_times_1d, axis=1) > 0)[0])
+
+    return distracted_columns.astype(int)
+
+
+def compute_derivatives(array):
+    """
+    Computes the derivative of each column in a 2D array.
+
+    Args:
+        array (numpy.ndarray): 2D array where each column represents a time series.
+
+    Returns:
+        numpy.ndarray: 2D array containing the derivative of each column.
+    """
+    # Compute the derivative for each column (along axis=0)
+    derivatives = np.diff(array, axis=0)
+
+    return derivatives
+
+
+def plot_heatmap(true_labels, predicted_labels):
+  plt.figure(figsize=(10, 7))
+
+  cm = confusion_matrix(true_labels, predicted_labels)
+  sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+              xticklabels=np.arange(cm.shape[1]),
+              yticklabels=np.arange(cm.shape[0]))
+  plt.xlabel('Predicted Label')
+  plt.ylabel('True Label')
+  plt.title('Confusion Matrix')
+  plt.show()
