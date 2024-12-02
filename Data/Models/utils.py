@@ -3,7 +3,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import re
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, f1_score
+import torch
+
 
 def plot_confusion_matrix(conf_matrix):
     plt.figure(figsize=(8, 6))
@@ -380,6 +382,18 @@ def compute_derivatives(array):
     return derivatives
 
 
+def compute_changepoints(tc_signal):
+    cps_array = []
+    for col_idx in range(tc_signal.shape[1]):
+        # Compute the difference along the column with NaN prepended
+        diffs = np.diff(tc_signal[:, col_idx], prepend=np.nan)
+        # Find the change points (from 0 to 1)
+        cps = np.where((diffs == 1))[0]
+        cps_array.append(cps)
+
+    return cps_array
+
+
 def plot_heatmap(true_labels, predicted_labels):
   plt.figure(figsize=(10, 7))
 
@@ -391,3 +405,10 @@ def plot_heatmap(true_labels, predicted_labels):
   plt.ylabel('True Label')
   plt.title('Confusion Matrix')
   plt.show()
+
+def f1_score_metric(preds, y):
+    preds = preds.argmax(dim=1)  # Convert predictions to class labels
+    preds = preds.cpu().numpy()  # Convert to numpy array
+    y = y.cpu().numpy()  # Convert to numpy array
+    f1 = f1_score(y, preds)  # Compute the weighted F1 score
+    return torch.tensor(f1)  # Return as a Tensor

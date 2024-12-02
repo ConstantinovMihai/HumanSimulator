@@ -376,7 +376,7 @@ if __name__ == '__main__':
     cps_test = compute_changepoints(tc_test)
     processed_tc_test = process_data_array(tc_test)
 
-    distances = load_data("distances_per_run.csv")
+    distances = load_data("MD_distances_per_run.csv")
     # distances = load_data("distances_per_run.csv")
     # for distancess in distances:
     #     # plot the distances
@@ -385,12 +385,6 @@ if __name__ == '__main__':
     #     plt.show()
 
     reshaped_tc_test = processed_tc_test.reshape(-1, processed_tc_test.shape[-1])
-
-    # Call the detect_distractions_mahalanobis_aux function to detect distractions
-    distraction_start_timesample_list, detected_distracted_samples_list= detect_distractions_mahalanobis_aux(distances, threshold=0.75)
-    
-    # save the distraction_start_timesample_list
-    np.save('/home/mihai/Thesis/Data/Models/distraction_start_timesample_list.npy', np.array(distraction_start_timesample_list, dtype=object), allow_pickle=True)
     real_changepoints = compute_changepoints(reshaped_tc_test.transpose())
     
     thresholds = np.linspace(0.6, 0.95, 20)
@@ -416,6 +410,10 @@ if __name__ == '__main__':
     plt.title('Performance of CUSUM with varying thresholds (with velocities) ')
     plt.show()
     
+    # Call the detect_distractions_mahalanobis_aux function to detect distractions
+    distraction_start_timesample_list, detected_distracted_samples_list= detect_distractions_mahalanobis_aux(distances, threshold=0.7)
+    # save the distraction_start_timesample_list
+    np.save('/home/mihai/Thesis/Data/Models/distraction_start_timesample_list.npy', np.array(distraction_start_timesample_list, dtype=object), allow_pickle=True)
     
     if analyse_performance:
         # Analyze the performance of the detector
