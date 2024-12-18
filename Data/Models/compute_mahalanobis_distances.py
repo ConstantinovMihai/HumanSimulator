@@ -300,11 +300,6 @@ if __name__ == '__main__':
     test_u_file = r'/home/mihai/Thesis/Data/Clean_CSV_data/updated_data/PRDPE/u.csv'
     test_x_file = r'/home/mihai/Thesis/Data/Clean_CSV_data/updated_data/PRDPE/x.csv'
     test_tc_file = r'/home/mihai/Thesis/Data/Clean_CSV_data/updated_data/PRDPE/mdist.csv'
-    
-    test_error_file = r'/home/mihai/Thesis/Data/Clean_CSV_data/updated_data/PRN/e.csv'
-    test_u_file = r'/home/mihai/Thesis/Data/Clean_CSV_data/updated_data/PRN/u.csv'
-    test_x_file = r'/home/mihai/Thesis/Data/Clean_CSV_data/updated_data/PRN/x.csv'
-    test_tc_file = r'/home/mihai/Thesis/Data/Clean_CSV_data/updated_data/PRN/mdist.csv'
 
     prior_without_derivatives = True
     prior_with_derivatives = True

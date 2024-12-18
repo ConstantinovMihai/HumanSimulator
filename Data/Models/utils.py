@@ -412,3 +412,38 @@ def f1_score_metric(preds, y):
     y = y.cpu().numpy()  # Convert to numpy array
     f1 = f1_score(y, preds)  # Compute the weighted F1 score
     return torch.tensor(f1)  # Return as a Tensor
+
+def plot_signals_with_highlight(tc, ocsvm, mahalanobis, time=None, label1="OCSVM", label2="Mahalanobis", title="Signals with Highlighted Distracted Intervals"):
+    """
+    Plots the signals tc, ocsvm, and mahalanobis with a highlighted region where tc equals 1.
+    
+    Parameters:
+        tc (array-like): Binary signal (0 or 1).
+        ocsvm (array-like): First signal to plot.
+        mahalanobis (array-like): Second signal to plot.
+        time (array-like, optional): Time array corresponding to the signals. If None, indices are used.
+    """
+    # Create a time array if not provided
+    if time is None:
+        time = np.arange(len(tc))
+    
+    plt.figure(figsize=(12, 5))
+    
+    # Highlight regions where tc == 1
+    plt.fill_between(time, 0, 1, where=np.array(tc) == 1, 
+                     color='lightblue', alpha=0.5, transform=plt.gca().get_xaxis_transform())
+    
+    # Plot ocsvm and mahalanobis signals with thinner lines
+    plt.plot(time, ocsvm, label=label1, color="red", linewidth=1.0)
+    plt.plot(time, mahalanobis, label=label2, color="green", linewidth=1.0)
+    
+    # Add labels, legend, and grid
+    plt.xlabel("Time")
+    plt.ylabel("Signal Value")
+    plt.title(title)
+    plt.legend()
+    plt.grid(True, linewidth=0.7)
+    
+    # Optimize layout and show plot
+    plt.tight_layout()
+    plt.show()

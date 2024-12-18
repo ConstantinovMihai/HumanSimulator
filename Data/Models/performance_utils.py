@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+from sklearn.metrics import roc_curve, auc
 
 def match_changepoints(true_changepoints, predicted_changepoints, tolerance=5):
     """
@@ -52,6 +52,67 @@ def compute_precision_recall_f1(true_changepoints, predicted_changepoints, toler
     f1_score = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
     
     return precision, recall, f1_score
+
+def plot_roc_curve(true_labels, predicted_scores):
+    """
+    Plots the ROC curve and computes AUC.
+
+    Parameters:
+    - true_labels: Array of true binary labels (0 or 1).
+    - predicted_scores: Array of predicted scores (e.g., probabilities or raw outputs).
+    """
+    fpr, tpr, thresholds = roc_curve(true_labels, predicted_scores)
+    roc_auc = auc(fpr, tpr)
+
+    # Plot the ROC curve
+    plt.figure(figsize=(8, 6))
+    plt.plot(fpr, tpr, label=f'ROC Curve (AUC = {roc_auc:.2f})', color='blue')
+    plt.plot([0, 1], [0, 1], 'k--', label='Random Guess')  # Diagonal line
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate (Recall)')
+    plt.title('ROC Curve')
+    plt.legend(loc='lower right')
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+
+    return roc_auc
+
+
+def compute_precision_recall_f1_from_numbers(matched, missed, false_alarms):
+    """
+    Computes precision, recall, and F1-score based on matched intervals,
+    missed intervals, and false alarms.
+
+    Parameters:
+    - matched: int, count of matched intervals
+    - missed: int, count of intervals in tc_true without a match
+    - false_alarms: int, count of intervals in tc_predicted without a match
+
+    Returns:
+    - precision: float, ratio of true positives to all predicted positives
+    - recall: float, ratio of true positives to all actual positives
+    - f1_score: float, harmonic mean of precision and recall
+    """
+
+    # True positives are the matched intervals
+    true_positives = matched
+
+    # Predicted positives include matched intervals and false alarms
+    predicted_positives = matched + false_alarms
+
+    # Actual positives include matched intervals and missed intervals
+    actual_positives = matched + missed
+
+    # Compute precision, recall, and F1-score
+    precision = true_positives / predicted_positives if predicted_positives > 0 else 0.0
+    recall = true_positives / actual_positives if actual_positives > 0 else 0.0
+    f1_score = (
+        2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+    )
+
+    return precision, recall, f1_score
+
 
 def compute_total_precision_recall_f1(real_changepoints, predicted_changepoints, tolerance=5):
     total_precision = 0
@@ -114,4 +175,36 @@ def generate_heatmap(real_changepoints, distances_ocsvm, tolerances, thresholds)
 
     return precision_grid, recall_grid, f1_score_grid
 
+
+def compute_avg_delay_aux(true_changepoints, predicted_changepoints, tolerance=5):
+    """
+    Matches predicted changepoints to true changepoints within a tolerance window and computes metrics.
+    """
+    # Ensure inputs are lists
+    true_changepoints = list(true_changepoints)
+    predicted_changepoints = list(predicted_changepoints)
+
+    true_matched = set()  # Tracks matched true changepoints
+    pred_matched = set()  # Tracks matched predicted changepoints
+    detection_delays = []  # Stores time differences between matched pairs
+
+    for pred_cp in predicted_changepoints:
+        for true_cp in true_changepoints:
+            if abs(pred_cp - true_cp) <= tolerance and true_cp not in true_matched:
+                true_matched.add(true_cp)
+                pred_matched.add(pred_cp)
+                detection_delays.append(abs(pred_cp - true_cp))  # Record delay
+                break
+
+    avg_detection_delay = sum(detection_delays) / len(detection_delays) if detection_delays else None
+
+    return avg_detection_delay
+
+def compute_avg_delay(true_changepoints, predicted_changepoints, tolerance=5):
+    avg_detection_delays = []
+    for idx, true_cp in enumerate(true_changepoints):
+        avg_detection_delay = compute_avg_delay_aux(true_cp, predicted_changepoints[idx], tolerance=tolerance)
+        avg_detection_delays.append(avg_detection_delay)
+
+    return np.array(avg_detection_delays)
 
