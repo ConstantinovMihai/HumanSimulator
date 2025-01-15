@@ -9,8 +9,8 @@ from compute_mahalanobis_distances import *
 def detect_distractions_mahalanobis_thresholding(distances_distracted, mean_shape=2, chi_threshold=0.80, n_consecutive_threshold=10):   
     threshold_distracted = chi2.ppf(chi_threshold, mean_shape) 
     threshold_reset = chi2.ppf(chi_threshold-0.05, mean_shape)       
-    print(f"Chi-squared distraction threshold (0.85): {threshold_distracted}")
-    print(f"Chi-squared reset threshold (0.75): {threshold_reset}")
+    # print(f"Chi-squared distraction threshold (0.85): {threshold_distracted}")
+    # print(f"Chi-squared reset threshold (0.75): {threshold_reset}")
     
     # Detect distractions by checking whether the Mahalanobis distance exceeds the 80% threshold
     detected_distracted = np.array(distances_distracted) > threshold_distracted
@@ -49,8 +49,8 @@ def detect_distractions_mahalanobis_momentum(distances_distracted, mean_shape=2,
     threshold_distracted = chi2.ppf(0.85, mean_shape) 
     threshold_reset = chi2.ppf(0.75, mean_shape)
     threshold_velocity = 1.5  # Threshold for the velocity of the Mahalanobis distance       
-    print(f"Chi-squared distraction threshold (0.85): {threshold_distracted}")
-    print(f"Chi-squared reset threshold (0.75): {threshold_reset}")
+    # print(f"Chi-squared distraction threshold (0.85): {threshold_distracted}")
+    # print(f"Chi-squared reset threshold (0.75): {threshold_reset}")
     
     velocities = np.diff(distances_distracted, prepend=distances_distracted[0])
 
@@ -58,7 +58,7 @@ def detect_distractions_mahalanobis_momentum(distances_distracted, mean_shape=2,
     detected_distracted = np.array(distances_distracted) > threshold_distracted
     velocities_excesive = np.array(velocities) > threshold_velocity
     
-    print(f'{detected_distracted.shape=}; {velocities_excesive.shape=}')
+    # print(f'{detected_distracted.shape=}; {velocities_excesive.shape=}')
 
     # Initialize variables to keep track of consecutive exceedances and distraction reset mechanism
     consecutive_count = 0
@@ -95,8 +95,8 @@ def detect_distractions_mahalanobis_velocity(distances_distracted, mean_shape=2,
     # Calculate the chi-squared thresholds
     threshold_distracted = chi2.ppf(0.95, mean_shape) 
     threshold_reset = chi2.ppf(0.65, mean_shape)       
-    print(f"Chi-squared distraction threshold (0.85): {threshold_distracted}")
-    print(f"Chi-squared reset threshold (0.75): {threshold_reset}")
+    # print(f"Chi-squared distraction threshold (0.85): {threshold_distracted}")
+    # print(f"Chi-squared reset threshold (0.75): {threshold_reset}")
     
     # Detect distractions by checking whether the Mahalanobis distance exceeds the 80% threshold
     detected_distracted = np.array(distances_distracted) > threshold_distracted
@@ -174,7 +174,7 @@ def detect_distractions_mahalanobis_aux(distances_from_prior, threshold=0.8):
 
     # Iterate over each column
     for column_index in range(distances_from_prior.shape[0]):
-        print(f"Processing column {column_index}...")
+        # print(f"Processing column {column_index}...")
         # Use the corresponding precomputed distances for this column
         distances_per_run = distances_from_prior[column_index]
 
@@ -223,7 +223,7 @@ def plot_distractions(tc_test_column, distraction_start_timesample, detected_dis
     plt.show()
 
 
-def analyze_performance(distraction_start_timesample_list, cps_list, tc_test, sampling_rate=100, detection_window=1):
+def analyze_performance(distraction_start_timesample_list, cps_list, tc_test, sampling_rate=200, detection_window=1):
     """
     Analyzes changepoint detection performance across multiple runs and calculates precision, recall, and F1-score for each column.
 
@@ -354,21 +354,21 @@ def compute_performance_cusum(distances, real_changepoints, threshold=0.8):
         precision, recall, f1_score = compute_precision_recall_f1(real_changepoints[idx], detected_distractions_per_run, tolerance=200)
 
 
-        print(f"Run {idx+1}: Precision = {precision:.2f}, Recall = {recall:.2f}, F1 Score = {f1_score:.2f}")
+        # print(f"Run {idx+1}: Precision = {precision:.2f}, Recall = {recall:.2f}, F1 Score = {f1_score:.2f}")
     print(f"{total_true_positives=}, {total_true=}, {total_pred=}")
     
     total_precision = total_true_positives/total_pred
     total_recall = total_true_positives/total_true
     total_f1_score = 2 * total_true_positives / (total_true + total_pred)
 
-    print(f"Total Precision = {total_precision:.2f}, Total Recall = {total_recall:.2f}, Total F1 Score = {total_f1_score:.2f}")
+    # print(f"Total Precision = {total_precision:.2f}, Total Recall = {total_recall:.2f}, Total F1 Score = {total_f1_score:.2f}")
     
     return total_precision, total_recall, total_f1_score
 
 
 if __name__ == '__main__':
-    plot = True
-    analyse_performance = False
+    plot = False
+    analyse_performance = True
 
     test_tc_file = r'/home/mihai/Thesis/Data/Clean_CSV_data/updated_data/PRDPE/mdist.csv'
 
@@ -390,14 +390,14 @@ if __name__ == '__main__':
     thresholds = np.linspace(0.6, 0.95, 20)
     precisions, recalls, f1_scores = [], [], []
     for threshold in thresholds:
-        print(f"Threshold: {threshold}")
+        # print(f"Threshold: {threshold}")
         precision, recall, f1_score = compute_performance_cusum(distances, real_changepoints, threshold)
         precisions.append(precision)
         recalls.append(recall)
         f1_scores.append(f1_score)
 
     # plot the results
-    print(f"{len(thresholds)=}; {len(precisions)=}, {len(recalls)=}, {len(f1_scores)=}")
+    # print(f"{len(thresholds)=}; {len(precisions)=}, {len(recalls)=}, {len(f1_scores)=}")
 
     plt.figure(figsize=(10, 5))
     plt.plot(thresholds, precisions, label='Precision')

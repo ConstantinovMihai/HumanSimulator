@@ -157,7 +157,7 @@ def run_detector(data_signal, prior_pdf_list, runs_per_person=4, write_to_file=F
     distances_from_prior_per_run = np.vstack(distances_from_prior_per_run)
 
     if write_to_file:
-        np.savetxt('MD_distances_per_run_not_distracted.csv', distances_from_prior_per_run, delimiter=',')
+        np.savetxt('MD_distances_per_run.csv', distances_from_prior_per_run, delimiter=',')
 
     return distances_from_prior_per_run
 
@@ -302,7 +302,7 @@ if __name__ == '__main__':
     test_tc_file = r'/home/mihai/Thesis/Data/Clean_CSV_data/updated_data/PRDPE/mdist.csv'
 
     prior_without_derivatives = True
-    prior_with_derivatives = True
+    prior_with_derivatives = False
 
     if prior_without_derivatives:
         # Process test data and run detector

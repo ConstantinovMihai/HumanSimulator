@@ -118,7 +118,11 @@ def compute_total_precision_recall_f1(real_changepoints, predicted_changepoints,
     total_precision = 0
     total_recall = 0
     total_f1_score = 0
+    run_idx = 0
     for real_cp, pred_cp in zip(real_changepoints, predicted_changepoints):
+        # if run_idx == 19:
+        #     continue
+        run_idx += 1
         precision, recall, f1_score = compute_precision_recall_f1(real_cp, pred_cp, tolerance)
         total_precision += precision
         total_recall += recall
@@ -127,31 +131,7 @@ def compute_total_precision_recall_f1(real_changepoints, predicted_changepoints,
     return total_precision / len(real_changepoints), total_recall / len(real_changepoints), total_f1_score / len(real_changepoints)
 
 
-def generate_heatmap(real_changepoints, distances_ocsvm, tolerances, thresholds):
-    precision_grid = np.zeros((len(tolerances), len(thresholds)))
-    recall_grid = np.zeros((len(tolerances), len(thresholds)))
-    f1_score_grid = np.zeros((len(tolerances), len(thresholds)))
-
-    # Iterate over tolerances and thresholds
-    for i, tolerance in enumerate(tolerances):
-        for j, threshold in enumerate(thresholds):
-            alarm_ocsvm_indices = []
-
-            # Generate alarms for the current threshold
-            for distances_ocsvm_run in distances_ocsvm:
-                alarm_indices = trigger_ocsvm_alarm(distances_ocsvm_run, threshold=threshold)
-                alarm_ocsvm_indices.append(alarm_indices)
-
-            # Compute precision, recall, F1 score
-            total_precision, total_recall, total_f1_score = compute_total_precision_recall_f1(
-                real_changepoints, alarm_ocsvm_indices, tolerance=tolerance
-            )
-
-            # Store the results in the grid
-            precision_grid[i, j] = total_precision
-            recall_grid[i, j] = total_recall
-            f1_score_grid[i, j] = total_f1_score
-
+def generate_heatmap(precision_grid, recall_grid, f1_grid, tolerances, thresholds):
     # Plot the heatmaps
     fig, axs = plt.subplots(1, 3, figsize=(18, 6))
     
@@ -165,7 +145,7 @@ def generate_heatmap(real_changepoints, distances_ocsvm, tolerances, thresholds)
     axs[1].set_xlabel("Threshold")
     axs[1].set_ylabel("Tolerance")
 
-    sns.heatmap(f1_score_grid, xticklabels=thresholds, yticklabels=tolerances, ax=axs[2], cmap='Reds', annot=True, fmt=".2f")
+    sns.heatmap(f1_grid, xticklabels=thresholds, yticklabels=tolerances, ax=axs[2], cmap='Reds', annot=True, fmt=".2f")
     axs[2].set_title("F1 Score Heatmap")
     axs[2].set_xlabel("Threshold")
     axs[2].set_ylabel("Tolerance")
@@ -173,7 +153,44 @@ def generate_heatmap(real_changepoints, distances_ocsvm, tolerances, thresholds)
     plt.tight_layout()
     plt.show()
 
-    return precision_grid, recall_grid, f1_score_grid
+def plot_signals_with_highlight(tc, ocsvm, mahalanobis, time=None, label1="OCSVM", label2="Mahalanobis", title="Signals with Highlighted Distracted Intervals"):
+    """
+    Plots the signals tc, ocsvm, and mahalanobis with a highlighted region where tc equals 1.
+    
+    Parameters:
+        tc (array-like): Binary signal (0 or 1).
+        ocsvm (array-like): First signal to plot.
+        mahalanobis (array-like): Second signal to plot.
+        time (array-like, optional): Time array corresponding to the signals. If None, indices are used.
+    """
+    # Create a time array if not provided
+    if time is None:
+        time = np.arange(len(tc))
+    
+    plt.figure(figsize=(12, 5))
+    
+    # Highlight regions where tc == 1
+    plt.fill_between(time, 0, 1, where=np.array(tc) == 1, 
+                     color='lightblue', alpha=0.5, transform=plt.gca().get_xaxis_transform())
+    
+    # Plot ocsvm and mahalanobis signals with thinner lines
+    plt.plot(time, ocsvm, label=label1, color="red", linewidth=1.0)
+    plt.plot(time, mahalanobis, label=label2, color="green", linewidth=1.0)
+    
+    # Add labels, legend, and grid
+    plt.xlabel("Time")
+    plt.ylabel("Signal Value")
+    plt.title(title)
+    plt.legend()
+    plt.grid(True, linewidth=0.7)
+    
+    # # place an horizontal line and add a label="Threshold"
+    # plt.axhline(y=2, color='blue')
+    # plt.text(0, 2.1, "Threshold", fontsize=12, va='center', ha='left')
+    
+    # Optimize layout and show plot
+    plt.tight_layout()
+    plt.show()
 
 
 def compute_avg_delay_aux(true_changepoints, predicted_changepoints, tolerance=5):

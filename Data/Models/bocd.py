@@ -172,7 +172,7 @@ def plot_posterior(T, data, cps, R, pmean, pvar):
     plt.show()
 
 
-def read_data(data_signal, tc_signal='Data/Clean_CSV_data/David_Li_CSV_data/PreviewDistractionExpData_S1/PRDCE/tc.csv'):
+def read_data(data_signal, tc_signal='/home/mihai/Thesis/Data/Clean_CSV_data/updated_data/PRDPE/mdist.csv'):
     """Read data from file.
     """
     # read data from all files of CSV_data/PreviewDistractionExpData_S1/PRDCE/u.csv
@@ -210,7 +210,7 @@ if __name__ == '__main__':
      
         var0   = 0.01     # The prior variance for mean parameter.
 
-        data, cps, _ = read_data(r'Data/Clean_CSV_data/David_Li_CSV_data/PreviewDistractionExpData_S1/PRDCE/e.csv')
+        data, cps, _ = read_data(r'/home/mihai/Thesis/Data/Clean_CSV_data/updated_data/PRDPE/e.csv')
         
         # choose every 10th data point
         data = data[::10]
