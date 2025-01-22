@@ -52,6 +52,39 @@ def generate_heatmap(precision_grid, recall_grid, f1_score_grid, tolerances, thr
     plt.tight_layout()
     plt.show()
 
+def trigger_ocsvm_alarm_cumsum(distances, threshold=-500, evidence_limit=10):
+    """
+    Detect alarms using cumulative sum evidence aggregation.
+    
+    Parameters:
+        distances (numpy.ndarray): Array of distances from the decision boundary (signed distances).
+        threshold (float): Threshold for distances to contribute evidence.
+        evidence_limit (float): Evidence limit at which an alarm is triggered.
+    
+    Returns:
+        alarm_indices (list): List of starting indices for alarms where the condition is met.
+    """
+
+    # Initialize variables
+    alarm_indices = []
+    cumulative_evidence = 0  # Cumulative sum for evidence
+    
+    # Iterate through the distances
+    for i in range(len(distances)):
+        if distances[i] < threshold:
+            # Accumulate evidence if distance is below the threshold
+            cumulative_evidence += abs(distances[i] - threshold)
+            
+            # Trigger alarm if cumulative evidence exceeds the evidence limit
+            if cumulative_evidence >= evidence_limit:
+                alarm_indices.append(i)  # Record the index of the alarm
+                cumulative_evidence = 0  # Reset the cumulative evidence
+        else:
+            # Decay or reset the evidence if the condition is not met
+            cumulative_evidence = 0
+    
+    return alarm_indices
+
 def trigger_ocsvm_alarm(distances, threshold=-500, count_limit=10):
     """
     Detect when 10 consecutive samples have distances below a specified threshold and trigger an alarm.
@@ -86,6 +119,16 @@ def trigger_ocsvm_alarms_dataset(ocsvm_scores, threshold=-300, count_limit=10):
 
     for run_idx, ocsvm_score_run in enumerate(ocsvm_scores): 
         ocsvm_alarms_run = trigger_ocsvm_alarm(ocsvm_score_run, threshold, count_limit=count_limit)
+        ocsvm_alarms.append(ocsvm_alarms_run)
+
+    return ocsvm_alarms
+
+
+def trigger_ocsvm_alarms_dataset_cumsum(ocsvm_scores, threshold=-300, evidence_limit=10):
+    ocsvm_alarms = []
+
+    for run_idx, ocsvm_score_run in enumerate(ocsvm_scores): 
+        ocsvm_alarms_run = trigger_ocsvm_alarm_cumsum(ocsvm_score_run, threshold, evidence_limit=evidence_limit)
         ocsvm_alarms.append(ocsvm_alarms_run)
 
     return ocsvm_alarms
@@ -128,7 +171,7 @@ def exponential_window_accumulation(
     return np.array(accumulated_values)
 
 
-def md_alarms_dataset_threshold(mahalanobis_scores, chi_squared_limit=0.8, mean_not_distracted_shape=2, evidence_threshold=15):
+def md_alarms_dataset_threshold(mahalanobis_scores, chi_squared_limit=0.8, mean_not_distracted_shape=3, evidence_threshold=15):
     md_alarms = []
     for idx in range(mahalanobis_scores.shape[0]):
         alarms, _ = detect_distractions_mahalanobis_threshold(mahalanobis_scores[idx], chi_squared_limit=chi_squared_limit, mean_not_distracted_shape=mean_not_distracted_shape, evidence_threshold=evidence_threshold)
@@ -136,17 +179,17 @@ def md_alarms_dataset_threshold(mahalanobis_scores, chi_squared_limit=0.8, mean_
     return md_alarms
 
 
-def md_alarms_dataset_cumsum(mahalanobis_scores, chi_squared_limit=0.8, mean_not_distracted_shape=2, evidence_threshold=1.5):
+def md_alarms_dataset_cumsum(mahalanobis_scores, chi_squared_limit=0.8, mean_not_distracted_shape=3, evidence_threshold=1.5):
     md_alarms = []
     for idx in range(mahalanobis_scores.shape[0]):
         alarms, _ = detect_distractions_mahalanobis_cusum(mahalanobis_scores[idx], chi_squared_limit=chi_squared_limit, mean_not_distracted_shape=mean_not_distracted_shape, evidence_threshold=evidence_threshold)
         md_alarms.append(alarms)
     return md_alarms
 
-def detect_distractions_mahalanobis_threshold(distances_distracted, chi_squared_limit=0.8, mean_not_distracted_shape=2, evidence_threshold=15):
+def detect_distractions_mahalanobis_threshold(distances_distracted, chi_squared_limit=0.8, mean_not_distracted_shape=3, evidence_threshold=15):
     # Calculate thresholds
     threshold_distracted = chi2.ppf(chi_squared_limit, mean_not_distracted_shape)
-    threshold_reset = chi2.ppf(chi_squared_limit - 0.1, mean_not_distracted_shape)
+    threshold_reset = chi2.ppf(chi_squared_limit*0.9, mean_not_distracted_shape)
 
     # Initialize variables
     counter = 0  # Counter for consecutive values above the threshold
@@ -181,7 +224,7 @@ def detect_distractions_mahalanobis_threshold(distances_distracted, chi_squared_
     return distractions_detected, counter_list
 
 
-def detect_distractions_mahalanobis_cusum(distances_distracted, chi_squared_limit=0.8, mean_not_distracted_shape=2, evidence_threshold=1.5):
+def detect_distractions_mahalanobis_cusum(distances_distracted, chi_squared_limit=0.8, mean_not_distracted_shape=3, evidence_threshold=1.5):
     threshold_distracted = chi2.ppf(chi_squared_limit, mean_not_distracted_shape)  # Threshold for distraction
     threshold_reset = chi2.ppf(chi_squared_limit-0.1, mean_not_distracted_shape)      # Threshold to resume search
     
@@ -212,3 +255,20 @@ def detect_distractions_mahalanobis_cusum(distances_distracted, chi_squared_limi
             S_pos = 0  # Reset cumulative sum to prepare for next detection
         S_pos_list.append(S_pos)
     return distractions_detected, S_pos_list
+
+def compute_correlation(md_distances, ocsvm_scores):
+    """
+    Computes the Pearson correlation coefficient between two signals.
+
+    Parameters:
+        md_distances (numpy.ndarray): Array of MD distances.
+        ocsvm_scores (numpy.ndarray): Array of OCSVM scores.
+
+    Returns:
+        float: Pearson correlation coefficient.
+    """
+    if len(md_distances) != len(ocsvm_scores):
+        raise ValueError("The two signals must have the same length.")
+
+    correlation = np.corrcoef(md_distances, ocsvm_scores)[0, 1]
+    return correlation
